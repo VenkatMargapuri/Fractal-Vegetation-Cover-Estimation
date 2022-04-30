@@ -48,6 +48,7 @@ PLANT_OUTPUT_PATH = os.path.join(CURRENT_DIRECTORY, "boundary_lines_grid", "")
 PVCFRAME_OUTPUT_PATH = os.path.join(CURRENT_DIRECTORY, "bitwise_slic_pvc", "")
 FINAL_HSV_OUTPUT_PATH = os.path.join(CURRENT_DIRECTORY, "finalHSV", "")
 SUBTRACTED_IMAGE_OUTPUT_PATH = os.path.join(CURRENT_DIRECTORY, "subtracted_output", "")
+UNWARPED_IMAGE_PATH = os.path.join(CURRENT_DIRECTORY, "OneSegmentUnwarped", "")
 
 counter = 0
 kernel = np.ones((3, 3), np.uint8)
@@ -411,8 +412,8 @@ def ExtractBitwiseImagesofPVCGrid(pts, img):
         
     cropped = img[rect[1]: rect[1] + rect[3], rect[0]: rect[0] + rect[2]]
     
-    cv2.imwrite("polyMask.jpg", maskImg)
-    cv2.imwrite("cropped.jpg", cropped)
+    #cv2.imwrite("polyMask.jpg", maskImg)
+    #cv2.imwrite("cropped.jpg", cropped)
     
     return cropped, maskImg
         
@@ -421,13 +422,13 @@ def EstimatePlantCover(polygonalMask, plantCoverImg):
     
     bitwise = cv2.bitwise_and(plantCoverImg, plantCoverImg, mask = polygonalMask)
     
-    cv2.imwrite("plantCover.jpg", bitwise)
+    #cv2.imwrite("plantCover.jpg", bitwise)
     
     #RemoveGridfromSLICImage(bitwise)
     
     plantCover = cv2.cvtColor(bitwise, cv2.COLOR_BGR2GRAY)
     
-    cv2.imwrite("plantCoverGray.jpg", plantCover)
+    #cv2.imwrite("plantCoverGray.jpg", plantCover)
     
     #print(plantCover)
     
@@ -745,6 +746,11 @@ def AssignLinestoEachSegment(rect_lines, img, bitImgShape):
     rect_lines_list = [v for k, v in rect_lines.items()]
 
     return rect_lines
+    
+def WriteImage(img, dir, filename):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    cv2.imwrite(os.path.join(CURRENT_DIRECTORY, dir, filename.split("\\")[-1]), img)    
 
 # Finds the intersection of the horizontal lines with grid contour
 def FindIntersectionofHorizontalLineswithGridContour(rect_lines, contourImg):
@@ -1271,12 +1277,10 @@ def RemoveGridfromSLICImage(slicImage):
     
     
     for line in validLines:
-        print("here")
-        print(line)
         thresh = cv2.line(thresh, line[0], line[1], (rng.randint(254, 255), rng.randint(250, 255), rng.randint(250, 255)), 2)
         
         
-    cv2.imwrite("gridRemoval.jpg", thresh)
+    #cv2.imwrite("gridRemoval.jpg", thresh)
     
     
 if os.path.isfile("KuraFieldPicture_7.3.17.txt"):
@@ -1303,7 +1307,7 @@ for filename in glob.glob(os.path.join(CURRENT_DIRECTORY, "OneSegmentImages", "*
     # Extracting all pixels in image that correspond to the PVC grid
     thresh = cv2.inRange(img_copy, lowerRange, upperRange)
     
-    cv2.imwrite('thresh2.jpg', thresh)
+    #cv2.imwrite('thresh2.jpg', thresh)
     
     # Binary threshold the image to set all PVC grid pixels to 255. 
     ret, gray = cv2.threshold(thresh, 220, 255, cv2.THRESH_BINARY) 
@@ -1323,7 +1327,8 @@ for filename in glob.glob(os.path.join(CURRENT_DIRECTORY, "OneSegmentImages", "*
     # Perform canny edge detection to detect the edges in the image
     edges = cv2.Canny(image=img_gray, threshold1=100, threshold2=200) # Canny Edge Detection
         
-    cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "canny", filename.split("\\")[-1]), edges)    
+    #cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "canny", filename.split("\\")[-1]), edges)    
+    WriteImage(edges, "canny", filename)
     
     # Dilate the image on which edges have been detected
     # This step is optional but only performed to accentuate the edges for better contour detection. In a way, it is also unusual.
@@ -1371,13 +1376,17 @@ for filename in glob.glob(os.path.join(CURRENT_DIRECTORY, "OneSegmentImages", "*
         
         unwarpedimg = UnwarpImage(pts, img)
                 
-        cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "OneSegmentUnwarped", filename.split("\\")[-1]), unwarpedimg)
+        #cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "OneSegmentUnwarped", filename.split("\\")[-1]), unwarpedimg)
+        WriteImage(unwarpedimg, "OneSegmentUnwarped", filename)
 
 # Step 1: Identify the PVC grid contour in the image
 # # Read the image as a grayscale image
-for filename in glob.glob(os.path.join(CURRENT_DIRECTORY, "OneSegmentUnwarped", filename.split("\\")[-1])):
+print(UNWARPED_IMAGE_PATH + "*.jpg")
+for filename in glob.glob(UNWARPED_IMAGE_PATH + "*.jpg"):
     # read the image file
-    img = cv2.imread(filename)        
+    img = cv2.imread(filename)  
+
+    print("here")
 
     # create a copy and operate on it so as to leave the original image untouched
     img_copy = img.copy()
@@ -1395,7 +1404,7 @@ for filename in glob.glob(os.path.join(CURRENT_DIRECTORY, "OneSegmentUnwarped", 
     # Extracting all pixels in image that correspond to the PVC grid
     thresh = cv2.inRange(img_copy, lowerRange, upperRange)
     
-    cv2.imwrite('thresh2.jpg', thresh)
+    #cv2.imwrite('thresh2.jpg', thresh)
     
     # Binary threshold the image to set all PVC grid pixels to 255. 
     ret, gray = cv2.threshold(thresh, 220, 255, cv2.THRESH_BINARY) 
@@ -1415,7 +1424,8 @@ for filename in glob.glob(os.path.join(CURRENT_DIRECTORY, "OneSegmentUnwarped", 
     # Perform canny edge detection to detect the edges in the image
     edges = cv2.Canny(image=img_gray, threshold1=100, threshold2=200) # Canny Edge Detection
     
-    cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "canny", filename.split("\\")[-1]), edges)    
+    #cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "canny", filename.split("\\")[-1]), edges)    
+    WriteImage(edges, "canny", filename)
     
     # Dilate the image on which edges have been detected
     # This step is optional but only performed to accentuate the edges for better contour detection. In a way, it is also unusual.
@@ -1484,7 +1494,8 @@ for filename in glob.glob(os.path.join(CURRENT_DIRECTORY, "OneSegmentUnwarped", 
 
         out1 = color.label2rgb(labels1, img, kind='avg', bg_label=0)
 
-        cv2.imwrite(PLANT_OUTPUT_PATH + filename.split("\\")[-1], out1)
+        #cv2.imwrite(PLANT_OUTPUT_PATH + filename.split("\\")[-1], out1)
+        WriteImage(out1, "boundary_lines_grid", filename)
         
         maskImg = np.zeros((img.shape[0], img.shape[1]), np.uint8)
 
@@ -1498,6 +1509,8 @@ for filename in glob.glob(os.path.join(CURRENT_DIRECTORY, "OneSegmentUnwarped", 
             centers_labels[i] = np.mean(np.nonzero(labels1==i),axis=1)
 
         plantLocations = []
+        
+        print("plant locations")
                 
         plantLocations = list(map(lambda x: x[0], centers_labels.items()))
 
@@ -1540,7 +1553,8 @@ for filename in glob.glob(os.path.join(CURRENT_DIRECTORY, "OneSegmentUnwarped", 
 
         subImg = cv2.subtract(bitwise_and_img, bitwise_and_img2)
 
-        cv2.imwrite(SUBTRACTED_IMAGE_OUTPUT_PATH + filename.split("\\")[-1], subImg)
+        #cv2.imwrite(SUBTRACTED_IMAGE_OUTPUT_PATH + filename.split("\\")[-1], subImg)
+        WriteImage(subImg, "subtracted_output", filename)
         
         plantCover = EstimatePlantCover(polygonalMask, subImg)
         

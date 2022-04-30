@@ -32,7 +32,9 @@ import operator
 # Variables for directories. 
 # The paths can be changed and perhaps even be unused if verbose debugging is not required.
 CURRENT_DIRECTORY = os.getcwd()
-GRID_IMAGE_PATH = os.path.join(CURRENT_DIRECTORY, "gridsTemp", "")
+INPUT_IMAGE_PATH = os.path.join(CURRENT_DIRECTORY, "FiveSegmentImages", "*.jpg")
+GRID_CONTOUR_PATH = os.path.join(CURRENT_DIRECTORY, "FieldCoverGridsTemp", "*.jpg")
+GRID_IMAGE_PATH = os.path.join(CURRENT_DIRECTORY, "grids", "")
 VERTICAL_LINE_INPUT_PATH = os.path.join(CURRENT_DIRECTORY, "PVCGrids", "")
 SUBTRACTED_IMAGE_INPUT_PATH = os.path.join(CURRENT_DIRECTORY, "subtracted_output", "")
 THRESHED_IMAGE_PATH = os.path.join(CURRENT_DIRECTORY, "threshed_images", "")
@@ -40,12 +42,12 @@ OUTPUT_PATH = os.path.join(CURRENT_DIRECTORY, "boundary_lines_bitwise_slic_pvc_o
 REG_HOUGHLINES_PATH = os.path.join(CURRENT_DIRECTORY, "regHoughLines", "")
 CONTOUR_IMAGE_PATH = os.path.join(CURRENT_DIRECTORY, "PVCGrids", "")
 CONTOUR_HORIZONTAL_LINE_INTERSECTION_PATH = os.path.join(CURRENT_DIRECTORY, "ContourHorizontalLineIntersections", "")
-BITWISE_IMAGE_PATH = os.path.join(CURRENT_DIRECTORY, "bitwise", "")
 CROPCOVER_IMAGE_PATH = os.path.join(CURRENT_DIRECTORY, "subtracted_output", "")
-BITWISE_INPUT_PATH = os.path.join(CURRENT_DIRECTORY, "bitwise_temp", "")
+BITWISE_INPUT_PATH = os.path.join(CURRENT_DIRECTORY, "bitwise", "")
 PLANT_OUTPUT_PATH = os.path.join(CURRENT_DIRECTORY, "boundary_lines_grid", "")
 PVCFRAME_OUTPUT_PATH = os.path.join(CURRENT_DIRECTORY, "bitwise_slic_pvc", "")
 SUBTRACTED_IMAGE_OUTPUT_PATH = os.path.join(CURRENT_DIRECTORY, "subtracted_output", "")
+
 
 counter = 0
 kernel = np.ones((3, 3), np.uint8)
@@ -925,6 +927,11 @@ def ExtendLinesInfinitely(lines, imgHeight):
 
 kernel = np.ones((3, 3), np.uint8)
 
+def WriteImage(img, dir, filename):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    cv2.imwrite(os.path.join(CURRENT_DIRECTORY, dir, filename.split("\\")[-1]), img)
+
 
 # Estimates the are of plant cover within a segment
 def EstimateSegmentArea(img, numSegments, filename):
@@ -958,7 +965,8 @@ def EstimateSegmentArea(img, numSegments, filename):
                 
         segmentAreas[filename.split("\\")[-1] + "_" + str(count)] = plantPixelPercentage
         
-        cv2.imwrite("C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\croppedImages\\crop_{0}_{1}.jpg".format(filename.split("\\")[-1], count), imgCrop)
+        #cv2.imwrite("C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\croppedImages\\crop_{0}_{1}.jpg".format(filename.split("\\")[-1], count), imgCrop)
+        WriteImage(imgCrop, "croppedImages", filename)
         
         # Increment height to be the height of the next segment for cropping
         y = y + gridSegmentHeight
@@ -981,7 +989,7 @@ def FindLargestContourIndex(contours):
 
 # Step 1: Identify the PVC grid contour in the image
 # Read the image as a grayscale image
-for filename in glob.glob('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\FieldcoverImgs\\*.jpg'):
+for filename in glob.glob(INPUT_IMAGE_PATH):
     # read the image file
     img = cv2.imread(filename)
 
@@ -993,7 +1001,8 @@ for filename in glob.glob('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\
     # convert from BGR to HSV color space
     img_copy = cv2.cvtColor(img_copy, cv2.COLOR_BGR2HSV)
     
-    cv2.imwrite("C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\HSVTemp\\{0}".format(filename.split("\\")[-1]), img_copy)
+    #cv2.imwrite("C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\HSVTemp\\{0}".format(filename.split("\\")[-1]), img_copy)
+    WriteImage(img_copy, "HSVTemp", filename)
 
     # lower and upper bounds of H, S and V to identify the PVC grid in image 
     # These values are determined empirically and vary by the color of the PVC grid in consideration
@@ -1036,16 +1045,19 @@ for filename in glob.glob('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\
 
     # Draw the largest contour on the image
     ctr_img = cv2.drawContours(ctr_img, [ctrs[max_ix]], -1, 255, 5)
-
-    cv2.imwrite('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\FieldCoverGridsTemp\\{0}'.format(filename.split("\\")[-1]), ctr_img)
+    
+    #cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "FieldCoverGridsTemp", filename.split("\\")[-1]), ctr_img)
+    WriteImage(ctr_img, "FieldCoverGridsTemp", filename)
     #counter = counter + 1
     #cv2.imshow('img.jpg', ctr_img)
     #cv2.waitKey(0)
 
 # Step 2: Process the PVC grid contours identified in step 1 and apply SLIC algorithm
-for filename in glob.glob('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\FieldCoverGridsTemp\\*.jpg'):
+for filename in glob.glob(GRID_CONTOUR_PATH):
     # Read an image within the PVC Grids directory
     img = cv2.imread(filename)
+    
+    print(filename)
     
     # Create a copy of the image so the original image is untouched
     img_copy = img.copy()
@@ -1079,8 +1091,9 @@ for filename in glob.glob('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\
 
     # Plot the rectangle on the image
     ctr_img = cv2.rectangle(img_copy, (x, y), (x + w, y + h), 255, -1)
-
-    cv2.imwrite('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\contours\\{0}'.format(filename.split("\\")[-1]), ctr_img)        
+    
+    #cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "contours", filename.split("\\")[-1]), ctr_img)        
+    WriteImage(ctr_img, "contours", filename)
     
     # Find the minimum enclosing rectangle (rotated rectangle) around the contour
     minRect = cv2.minAreaRect(ctrs[0])
@@ -1101,11 +1114,12 @@ for filename in glob.glob('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\
     
     # Plot the rotated rectangle on the image
     rot_ctr_img = cv2.drawContours(rot_ctr_img, [box], -1, (255, 255, 255), -1)
-    
-    cv2.imwrite("C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\RotCtrTemp\\{0}".format(filename.split("\\")[-1]), rot_ctr_img)
-    
+        
+    #cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "RotCtrTemp", filename.split("\\")[-1]), rot_ctr_img)
+    WriteImage(rot_ctr_img, "RotCtrTemp", filename)
+        
     # Read the original image file
-    original = cv2.imread("C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\FieldcoverImgs\\{0}".format(filename.split("\\")[-1]))  
+    original = cv2.imread(os.path.join(CURRENT_DIRECTORY, "FiveSegmentImages", filename.split("\\")[-1]))  
 
     print(filename.split("\\")[-1])
     
@@ -1138,7 +1152,8 @@ for filename in glob.glob('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\
     if(warped.shape[0] < warped.shape[1]):
         warped = cv2.rotate(warped, cv2.cv2.ROTATE_90_COUNTERCLOCKWISE)    
 
-    cv2.imwrite('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\bitwise\\{0}'.format(filename.split("\\")[-1]), warped)
+    #cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "bitwise", filename.split("\\")[-1]), warped)
+    WriteImage(warped, "bitwise", filename)
     
     cv2.imwrite("bitwise.jpg", bitwise)
     
@@ -1157,8 +1172,8 @@ for filename in glob.glob('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\
     
     contImg = cv2.drawContours(maskImg, contours, -1, (255, 255, 255), 5) 
     
-    
-    cv2.imwrite("C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\GrayContours\\{0}".format(filename.split("\\")[-1]), contImg)
+    #cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "GrayContours", filename.split("\\")[-1]), contImg)
+    WriteImage(contImg, "GrayContours", filename)
     
     hsvWarped = cv2.cvtColor(warped, cv2.COLOR_BGR2HSV)
     
@@ -1169,12 +1184,13 @@ for filename in glob.glob('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\
     
     grid = cv2.bitwise_and(warped, warped, mask=thresh)    
 
-    cv2.imwrite('C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\grids\\{0}'.format(filename.split("\\")[-1]), grid)
+    #cv2.imwrite(os.path.join(CURRENT_DIRECTORY, "grids", filename.split("\\")[-1]), grid)
+    WriteImage(grid, "grids", filename)
     #counter = counter + 1
     
 for f in glob.glob(BITWISE_INPUT_PATH + "*.jpg"):
-    print(f)
-    img = io.imread(BITWISE_INPUT_PATH + f.split("\\")[-1])
+
+    img = io.imread(f)
 
     #img = io.imread("C:\\Users\\marven\\Documents\\Fall-2021\\Groundcover\\HSV-bitwise.jpg")
 
@@ -1190,7 +1206,8 @@ for f in glob.glob(BITWISE_INPUT_PATH + "*.jpg"):
 
     out1 = color.label2rgb(labels1, img, kind='avg', bg_label=0)
 
-    cv2.imwrite(PLANT_OUTPUT_PATH + f.split("\\")[-1], out1)
+    #cv2.imwrite(PLANT_OUTPUT_PATH + f.split("\\")[-1], out1)
+    WriteImage(out1, "boundary_lines_grid", f)
 
     maskImg = np.zeros((img.shape[0], img.shape[1]), np.uint8)
 
@@ -1233,15 +1250,18 @@ for f in glob.glob(BITWISE_INPUT_PATH + "*.jpg"):
 #             cv2.circle(pvcFrameImg, (lab[1][val], lab[0][val]), radius = 0, color = (255, 255, 255), thickness = -1)
 
 
-    cv2.imwrite(PLANT_OUTPUT_PATH + f.split("\\")[-1], maskImg) 
+    #cv2.imwrite(PLANT_OUTPUT_PATH + f.split("\\")[-1], maskImg) 
+    WriteImage(maskImg, "boundary_lines_grid", f)
 
     #cv2.imwrite(PVCFRAME_OUTPUT_PATH + f.split("\\")[-1], pvcFrameImg)
 
-    originalImg = cv2.imread(BITWISE_INPUT_PATH + f.split("\\")[-1])
+    originalImg = cv2.imread(f)
 
     maskImg = cv2.imread(PLANT_OUTPUT_PATH + f.split("\\")[-1], 0)
 
     bitwise = cv2.bitwise_and(originalImg, originalImg, mask = maskImg)
+    
+    print("passed")
 
     lower_range = np.array([0, 30, 0])
     upper_range = np.array([93, 255, 255])
@@ -1268,7 +1288,8 @@ for f in glob.glob(BITWISE_INPUT_PATH + "*.jpg"):
 
     subImg = cv2.subtract(bitwise_and_img, bitwise_and_img2)
 
-    cv2.imwrite(SUBTRACTED_IMAGE_OUTPUT_PATH + f.split("\\")[-1], subImg)    
+    #cv2.imwrite(SUBTRACTED_IMAGE_OUTPUT_PATH + f.split("\\")[-1], subImg)    
+    WriteImage(subImg, "subtracted_output", f)
     
     
 # Iterate over the images of the PVC Grids   
@@ -1305,7 +1326,8 @@ for f in glob.glob(GRID_IMAGE_PATH + "*.jpg"):
     # Dilate the image to join any discontinuities
     #thresh = cv2.dilate(kernel, thresh, iterations = 2)
     
-    cv2.imwrite(THRESHED_IMAGE_PATH + f.split("\\")[-1], thresh)
+    #cv2.imwrite(THRESHED_IMAGE_PATH + f.split("\\")[-1], thresh)
+    WriteImage(thresh, "threshed_images", f)
 
     # Perform canny edge detection on the image
     edges = cv2.Canny(image=thresh, threshold1=100, threshold2=200) # Canny Edge Detection
@@ -1355,7 +1377,7 @@ for f in glob.glob(GRID_IMAGE_PATH + "*.jpg"):
         rect_lines = GroupLinesbySegment(merged_lines_all, gridImgCopy.shape[0], 5)        
         
         #print(rect_lines)
-        bitImg = cv2.imread(BITWISE_IMAGE_PATH + f.split("\\")[-1])        
+        bitImg = cv2.imread(BITWISE_INPUT_PATH + f.split("\\")[-1])        
 
         # create a copy and operate on it so as to leave the original image untouched
         img_copy = bitImg.copy()    
